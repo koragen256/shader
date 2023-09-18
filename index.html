@@ -18,6 +18,34 @@
             
             vec3 lightDir = vec3(cos(time), 0.577, 0.577);
             
+            vec3 hsv2rgb(vec3 hsv) {
+                float h = hsv.x * 360.0;  // 色相を0から360の範囲に正規化
+                float s = hsv.y;
+                float v = hsv.z;
+                
+                float c = v * s;
+                float x = c * (1.0 - abs(mod(h / 60.0, 2.0) - 1.0));
+                float m = v - c;
+                
+                vec3 rgb;
+                
+                if (h < 60.0) {
+                  rgb = vec3(c, x, 0.0);
+                } else if (h < 120.0) {
+                  rgb = vec3(x, c, 0.0);
+                } else if (h < 180.0) {
+                  rgb = vec3(0.0, c, x);
+                } else if (h < 240.0) {
+                  rgb = vec3(0.0, x, c);
+                } else if (h < 300.0) {
+                  rgb = vec3(x, 0.0, c);
+                } else {
+                  rgb = vec3(c, 0.0, x);
+                }
+                
+                return rgb + m;
+              }
+
             // rotate
             vec3 rotate(vec3 p, float angle, vec3 axis){
                 vec3 a = normalize(axis);
@@ -109,7 +137,7 @@
                 }else{
                     color = vec3(0.0);
                 }
-                gl_FragColor = vec4(color, 1.0);
+                gl_FragColor = vec4(hsv2rgb(color),1.0)*vec4(color, 1.0);
             }
 		</script>
 		<!-- /fragment shader -->
