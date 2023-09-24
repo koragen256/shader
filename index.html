@@ -58,17 +58,13 @@
                 float s2 = d_Sphere(p+vp1,2.9);
                 float s3 = d_Sphere(p+vp2,1.4);
                 float s1_2 = softMax(s1,-s2,4.);
-                float b1 = d_Box(p,sin(time)+2.);
-                float Main = min(b1,(-softMax(-s1_2,-s3,1.)));
+                float Main = (-softMax(-s1_2,-s3,1.));
             
                 float s4 = d_Sphere(p+vp3,1.0);
             
                 Main = -max(-Main,-s4);
-            
-                vec3 Cvp = rotate(cPos*3., time*1.1, vec3(0,0.3,1));
-                float Cs = d_Sphere(p-Cvp,20.);
                 
-                return max(Main,-Cs);
+                return Main;
             }
             
             vec3 getNormal(vec3 p){
@@ -81,19 +77,16 @@
             }
             
             vec3 trace(vec3 pos,vec3 ray){
-            
-                ray = rotate(ray, time*0.1, vec3(0,0.3,1));
-                pos = rotate(pos, time*0.1, vec3(0,0.3,1));
+                ray = rotate(ray, time*0.2, vec3(0,0.3,1));
+                pos = rotate(pos, time*0.2, vec3(0,0.3,1));
                 pos*=3.;
+
                 float d=0.;
                 vec3 color=vec3(1.0, 0.5255, 0.9765);
-                for(int i=0;i<64;i++){
+                for(int i=0;i<16;i++){
                     d = sdf(pos);
                     color = (getNormal(pos)+vec3(0.3,0.3,0.3));
                     pos += d*ray;
-                    if(d<0.05){
-                        break;
-                    }
                 }
             
                 if(d>0.3){
