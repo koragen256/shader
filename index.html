@@ -1,5 +1,12 @@
 <html>
 	<head>
+        <style>
+            /* キャンバスを元のサイズに拡大表示 */
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
 		<!-- fragment shader -->
 		<script id="fs" type="x-shader/x-fragment">
             precision mediump float;
@@ -7,45 +14,8 @@
             uniform vec2 mouse;
             uniform vec2 resolution;
             
-            const vec3 cPos = vec3(0.0, 0.0, 3.0);
-            const vec3 cDir = vec3(0.0, 0.0, -1.0);
-            const vec3 cUp  = vec3(0.0, 1.0, 0.0);
-            
-            const float PI = acos(-1.);
-            const float TAU = acos(-1.)*2.;
-            
-            const float N = 6.;
-            
-            vec3 lightDir = vec3(cos(time), 0.577, 0.577);
-            
-            vec3 hsv2rgb(vec3 hsv) {
-                float h = hsv.x * 360.0;  // 色相を0から360の範囲に正規化
-                float s = hsv.y;
-                float v = hsv.z;
-                
-                float c = v * s;
-                float x = c * (1.0 - abs(mod(h / 60.0, 2.0) - 1.0));
-                float m = v - c;
-                
-                vec3 rgb;
-                
-                if (h < 60.0) {
-                  rgb = vec3(c, x, 0.0);
-                } else if (h < 120.0) {
-                  rgb = vec3(x, c, 0.0);
-                } else if (h < 180.0) {
-                  rgb = vec3(0.0, c, x);
-                } else if (h < 240.0) {
-                  rgb = vec3(0.0, x, c);
-                } else if (h < 300.0) {
-                  rgb = vec3(x, 0.0, c);
-                } else {
-                  rgb = vec3(c, 0.0, x);
-                }
-                
-                return rgb + m;
-              }
-
+            const float e = exp(1.);
+            const vec3 cPos = vec3(0,0,10);
             // rotate
             vec3 rotate(vec3 p, float angle, vec3 axis){
                 vec3 a = normalize(axis);
@@ -66,78 +36,80 @@
                 return m * p;
             }
             
-            // smoothing min
-            float smoothMin(float d1, float d2, float k){
-                float h = exp(-k * d1) + exp(-k * d2);
-                return -log(h) / k;
+            float softMax(float a,float b,float R){
+                return (1./R)*log(exp(a*R)+exp(b*R));
             }
             
-            float h(vec3 p,float i){
-                float c = TAU/N;
-                float r = 1.0/(sin(c));
-                p = rotate(p,c*i,vec3(1,0,0));
-                return p.x+p.y+p.z;
+            float d_Sphere(vec3 p,float size){
+                return length(p)-size;
             }
             
-            // box
-            float distFuncBox(vec3 p,float s){
-                p = mod(p,2.0)-1.0;
-                float t = length(max(abs(p)-s,-0.18))-0.2;
-                return t;
-            }
-            // shper
-            float distFuncSph(vec3 p,float s){
-                p=p-cPos;
-                return length(p)-s;
+            float d_Box(vec3 p,float s){
+                p = mod(p,20.)-10.;
+                float c = length(max(abs(p)-s,-0.18))-0.2;
+                return c;
             }
             
-            // distance function
-            float distFunc(vec3 p){
+            float sdf(vec3 p){
+                vec3 vp1 = vec3(cos(time)*2.,sin(time)*2.,-2.);
+                vec3 vp2 = vec3(cos(time*3.)*3.,sin(time*2.)*2.,2.*cos(time));
+                vec3 vp3 = vec3(-cos(time/2.)*5.,sin(time/4.)*6.,sin(time/3.)*6.);
+                float s1 = d_Sphere(p,2.5);
+                float s2 = d_Sphere(p+vp1,2.9);
+                float s3 = d_Sphere(p+vp2,1.4);
+                float s1_2 = softMax(s1,-s2,4.);
+                float b1 = d_Box(p,sin(time)+2.);
+                float Main = min(b1,(-softMax(-s1_2,-s3,1.)));
             
-                vec3 q = rotate(p, radians(time * 10.0), vec3(1.0, 0.7, 0.1));
-                float d1 = distFuncBox(q,0.5);
-                float d2 = distFuncSph(p,0.5);
-                return max(d1, -d2);
+                float s4 = d_Sphere(p+vp3,1.0);
+            
+                Main = -max(-Main,-s4);
+            
+                vec3 Cvp = rotate(cPos*3., time*1.1, vec3(0,0.3,1));
+                float Cs = d_Sphere(p-Cvp,20.);
+                
+                return max(Main,-Cs);
             }
             
-            vec3 genNormal(vec3 p){
-                float d = 0.01;
+            vec3 getNormal(vec3 p){
+                float d = 0.001;
                 return normalize(vec3(
-                    distFunc(p + vec3(  d, 0.0, 0.0)) - distFunc(p + vec3( -d, 0.0, 0.0)),
-                    distFunc(p + vec3(0.0,   d, 0.0)) - distFunc(p + vec3(0.0,  -d, 0.0)),
-                    distFunc(p + vec3(0.0, 0.0,   d)) - distFunc(p + vec3(0.0, 0.0,  -d))
+                    sdf(vec3(p.x+d,p.y,p.z))-sdf(vec3(p.x-d,p.y,p.z)),
+                    sdf(vec3(p.x,p.y+d,p.z))-sdf(vec3(p.x,p.y-d,p.z)),
+                    sdf(vec3(p.x,p.y,p.z+d))-sdf(vec3(p.x,p.y,p.z-d))
                 ));
             }
             
-            void main(void){
-                // fragment position
-                vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
-                
-                // camera and ray
-                vec3 cSide = cross(cDir, cUp);
-                float targetDepth = 1.0;
-                vec3 ray = normalize(cSide * p.x + cUp * p.y + cDir * targetDepth);
-                
-                // marching loop
-                float tmp, dist;
-                tmp = 0.0;
-                vec3 dPos = cPos;
-                for(int i = 0; i < 256; i++){
-                    dist = distFunc(dPos);
-                    tmp += dist;
-                    dPos = cPos + tmp * ray;
+            vec3 trace(vec3 pos,vec3 ray){
+            
+                ray = rotate(ray, time*0.1, vec3(0,0.3,1));
+                pos = rotate(pos, time*0.1, vec3(0,0.3,1));
+                pos*=3.;
+                float d=0.;
+                vec3 color=vec3(1.0, 0.5255, 0.9765);
+                for(int i=0;i<64;i++){
+                    d = sdf(pos);
+                    color = (getNormal(pos)+vec3(0.3,0.3,0.3));
+                    pos += d*ray;
+                    if(d<0.05){
+                        break;
+                    }
                 }
-                
-                // hit check
-                vec3 color;
-                if(abs(dist) < 0.1){
-                    vec3 normal = genNormal(dPos);
-                    float diff = clamp(dot(lightDir, normal), 0.1, 1.0);
-                    color = vec3(1.0, 1.0, 1.0) * diff;
-                }else{
-                    color = vec3(0.0);
+            
+                if(d>0.3){
+                    color=vec3(0.8627, 0.9725, 1.0);
                 }
-                gl_FragColor = vec4(hsv2rgb(color),1.0)*vec4(color, 1.0);
+            
+                return color;
+            }
+            
+            void main() {
+                
+                
+                vec2 pos = (2.0*gl_FragCoord.xy-resolution.xy)/min(resolution.x,resolution.y);
+                
+                vec3 ray = normalize((vec3(pos,0)-cPos)*vec3(2,2,1));
+                gl_FragColor = vec4(trace(cPos,ray),1);
             }
 		</script>
 		<!-- /fragment shader -->

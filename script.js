@@ -25,7 +25,7 @@ var uniLocation = new Array();
 
 window.onload = function(){
 	c = document.getElementById('canvas');
-	cw = window.innerWidth; ch = window.innerHeight;
+	cw = window.innerWidth*0.65; ch = window.innerHeight*0.65;
 	c.width = cw; c.height = ch;
 	c.addEventListener('mousemove', mouseMove, true);
 	gl = c.getContext('webgl') || c.getContext('experimental-webgl');
