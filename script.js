@@ -1,21 +1,3 @@
-// sample_068
-//
-// GLSL だけでレンダリングする
-
-// GLSL サンプルの(ほぼ)共通仕様 =============================================
-// 
-// ・シェーダのコンパイルに失敗した場合は auto run を無効にします
-// ・auto run は 30fps になっているので環境と負荷に応じて適宜変更しましょう
-// ・uniform 変数は以下のようにシェーダへ送られます 
-//     ・time: 経過時間を秒単位(ミリ秒は小数点以下)で送る(float)
-//     ・mouse: マウス座標を canvas 左上原点で 0 ～ 1 の範囲で送る(vec2)
-//     ・resolution: スクリーンの縦横の幅をピクセル単位で送る(vec2)
-// ・シェーダのコンパイルに失敗した場合エラー内容をアラートとコンソールに出力
-// ・シェーダのエラーで表示される行番号は一致するように HTML を書いてあります
-// 
-// ============================================================================
-
-// global
 var c, cw, ch, mx, my, gl, run, eCheck;
 var startTime;
 var time = 0.0;
@@ -67,17 +49,6 @@ window.addEventListener('resize', function() {
 	c.width = cw; c.height = ch;
 });
 
-// checkbox
-function checkChange(e){
-	run = e.currentTarget.checked;
-	if(run){
-		startTime = new Date().getTime();
-		render();
-	}else{
-		tempTime += time;
-	}
-}
-
 function mouseMove(e){
 	mx = e.offsetX / cw;
 	my = e.offsetY / ch;
@@ -99,7 +70,6 @@ function render(){
 	setTimeout(render, fps);
 }
 
-// シェーダを生成する関数
 function create_shader(id){
 	var shader;
 	var scriptElement = document.getElementById(id);
@@ -129,65 +99,36 @@ function create_shader(id){
 	}
 }
 
-// プログラムオブジェクトを生成しシェーダをリンクする関数
 function create_program(vs, fs){
-	// プログラムオブジェクトの生成
 	var program = gl.createProgram();
 	
-	// プログラムオブジェクトにシェーダを割り当てる
 	gl.attachShader(program, vs);
 	gl.attachShader(program, fs);
 	
-	// シェーダをリンク
 	gl.linkProgram(program);
 	
-	// シェーダのリンクが正しく行なわれたかチェック
 	if(gl.getProgramParameter(program, gl.LINK_STATUS)){
-	
-		// 成功していたらプログラムオブジェクトを有効にする
 		gl.useProgram(program);
-		
-		// プログラムオブジェクトを返して終了
 		return program;
 	}else{
-		
-		// 失敗していたら NULL を返す
 		return null;
 	}
 }
 
-// VBOを生成する関数
 function create_vbo(data){
-	// バッファオブジェクトの生成
 	var vbo = gl.createBuffer();
-	
-	// バッファをバインドする
 	gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-	
-	// バッファにデータをセット
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-	
-	// バッファのバインドを無効化
 	gl.bindBuffer(gl.ARRAY_BUFFER, null);
 	
-	// 生成した VBO を返して終了
 	return vbo;
 }
 
-// IBOを生成する関数
 function create_ibo(data){
-	// バッファオブジェクトの生成
 	var ibo = gl.createBuffer();
-	
-	// バッファをバインドする
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-	
-	// バッファにデータをセット
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
-	
-	// バッファのバインドを無効化
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 	
-	// 生成したIBOを返して終了
 	return ibo;
 }
